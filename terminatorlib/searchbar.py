@@ -6,9 +6,19 @@
 from gi.repository import Gtk, Gdk
 from gi.repository import GObject
 from gi.repository import GLib
+from gi.repository import Vte
 
 from translation import _
 from config import Config
+
+
+# Values bellow is currently not mapped by GObject introspection, it is a manual map from:
+# https://github.com/luvit/pcre2/blob/a677f5b51bac251082856d35a48a01670e2fd4a7/src/pcre2.h.in#L120
+PCRE2_UTF = 0x00080000
+PCRE2_NO_UTF_CHECK = 0x40000000
+PCRE2_MULTILINE = 0x00000400
+
+SEARCH_FLAGS = PCRE2_UTF | PCRE2_NO_UTF_CHECK | PCRE2_MULTILINE
 
 # pylint: disable-msg=R0904
 class Searchbar(Gtk.HBox):
@@ -128,8 +138,8 @@ class Searchbar(Gtk.HBox):
 
         if searchtext != self.searchstring:
             self.searchstring = searchtext
-            self.searchre = GLib.Regex(searchtext, 0, 0)
-            self.vte.search_set_gregex(self.searchre, 0)
+            self.searchre = Vte.Regex.new_for_search(searchtext, -1, SEARCH_FLAGS)
+            self.vte.search_set_regex(self.searchre, 0)
 
         self.next.set_sensitive(True)
         self.prev.set_sensitive(True)
@@ -159,6 +169,7 @@ class Searchbar(Gtk.HBox):
         """Trap and re-emit the end-search signal"""
         self.searchstring = None
         self.searchre = None
+        self.vte.search_set_regex(None, 0)
         self.emit('end-search')
 
     def get_search_term(self):
